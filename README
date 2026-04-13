@@ -1,0 +1,74 @@
+# Chess AI
+
+In our midterm course project for the Symbolic AI Course we created an GOFAI system using min-max search.
+
+## Requirements
+
+- Python >= 3.7
+- pygame
+- tkinter
+
+Install dependencies:
+
+```bash
+pip install pygame
+pip install tk
+```
+
+## Starting the GUI
+
+Run `ChessMain.py` with the following arguments:
+
+```bash
+python3 ChessMain.py --agent1 [AGENT] --agent2 [AGENT] --verbose --time_control [SECONDS] --use_gui
+```
+
+**Agent options:**
+
+| Value       | Description                                              |
+|-------------|----------------------------------------------------------|
+| `Human`     | Play yourself via the GUI                                |
+| `MrRandom`  | Plays completely random valid moves                      |
+| `MrNovice`  | Plays using a basic minimax algorithm                    |
+| `Agent1`    | Uses the `Agent` class from `student_agents/template.py` |
+| `Agent2`    | Uses the `Agent` class from `student_agents/template2.py`|
+| `path/to/agent.py` | Path to a custom agent file (not supported on Windows) |
+
+**Example — Human vs. your agent:**
+
+```bash
+python3 ChessMain.py --agent1 Human --agent2 Agent1 --time_control 20 --use_gui
+```
+
+**Example — Agent vs. Agent (no GUI):**
+
+```bash
+python3 ChessMain.py --agent1 Agent1 --agent2 MrRandom --time_control 20
+```
+
+## Board Selection
+
+Edit `Settings.json` and set the board value to `1` or `2` to choose between available board layouts.
+
+## Agent Implementation
+
+Your agent lives in `student_agents/template.py`. The class must be named `Agent` and follow the interface in that file. Use `update_move` to register preliminary moves so your agent does not forfeit on timeout.
+
+Your agent must be **single-threaded**. Multi-threaded agents are disqualified.
+
+## Submission
+
+Rename your agent file to `lastname1_lastname2.py` (e.g. `frank_vetter.py`) and keep the class name as `Agent`. Include a short documentation document describing:
+
+- The algorithm used
+- The heuristic / evaluation function and its motivation
+
+Do not modify any file other than your agent file.
+
+## Algorithm
+
+[Describe your algorithm here — e.g. Minimax with Alpha-Beta pruning]
+
+## Evaluation Function
+
+[Describe your heuristic here]
