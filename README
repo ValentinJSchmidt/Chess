@@ -1,6 +1,6 @@
 # Chess AI
 
-In our midterm course project for the Symbolic AI Course we created an GOFAI system using min-max search.
+In our midterm course project for the Symbolic AI Course we created an GOFAI system using negamax-search, pruning and iterative deepening and various heuristic. The system is specified to play a smaller variant of chess against other agents. It plays better then an inexperienced chess player.
 
 ## Requirements
 
@@ -56,19 +56,26 @@ Your agent lives in `student_agents/template.py`. The class must be named `Agent
 
 Your agent must be **single-threaded**. Multi-threaded agents are disqualified.
 
-## Submission
 
-Rename your agent file to `lastname1_lastname2.py` (e.g. `frank_vetter.py`) and keep the class name as `Agent`. Include a short documentation document describing:
-
-- The algorithm used
-- The heuristic / evaluation function and its motivation
-
-Do not modify any file other than your agent file.
 
 ## Algorithm
 
-[Describe your algorithm here — e.g. Minimax with Alpha-Beta pruning]
+Our agent (`student_agents/template.py`) uses **Negamax with Alpha-Beta pruning** and **iterative deepening**:
+
+- **Negamax**: A symmetric formulation of minimax — each node maximizes the negated score of its children, so white and black are handled with the same code.
+- **Alpha-Beta pruning**: Cuts off branches that cannot influence the final decision, dramatically reducing the number of nodes evaluated.
+- **Iterative deepening**: The search starts at depth 1 and increments indefinitely. After each completed depth, the best move found so far is registered via `update_move`, so the agent always has a valid move ready when time runs out.
 
 ## Evaluation Function
 
-[Describe your heuristic here]
+The heuristic scores the board by summing material value and positional bonuses for each piece:
+
+**Material values:** K=0, Q=9, R=5, B=3, N=3, p=1
+
+**Piece-square tables:** Each piece type has a 6×6 positional score table that rewards good squares (e.g. knights in the center, pawns advanced toward promotion). Pawns have separate tables for white and black to incentivise advancement.
+
+**Pawn structure / endgame:** The white and black pawn tables assign very high scores (9–10) to pawns near the promotion rank, encouraging the agent to push pawns in the endgame.
+
+**Zobrist hashing + transposition table:** Board positions are hashed using a Zobrist hash (random 64-bit integers per piece/square combination, XOR'd together). Evaluated positions are cached in a lookup table so repeated positions are not re-evaluated.
+
+---

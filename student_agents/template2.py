@@ -2,11 +2,7 @@
 import time
 import copy
 import random
-# import sys
-# sys.path.append(
-#     '/Users/jonathanvonrad/Desktop/Artificial_Intelligence/Assignment08/Chess/')
-# from ChessEngine import GameState
-
+### This was another students agent we used for testing
 
 class Agent:
     def __init__(self):
