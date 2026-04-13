@@ -1,13 +1,18 @@
 import random
-import sys
-sys.path.append('C:/Users/morit/OneDrive/Desktop/Chess')
-import ChessEngine
+# import sys
+# # caution: path[0] is reserved for script path (or '' in REPL)
+# sys.path.insert(1, 'C:/Users/morit/OneDrive/Desktop/Chess')
+#import ChessEngine
 
 
 class Agent:
     def __init__(self):
         self.move_queue = None
-
+        self.maxDepth = 0
+        self.value = 0
+        nextMove = None
+        self.ZobristTable = self.initTable()
+        self.lookupTable = {}
     def get_move(self):
         move = None
         while not self.move_queue.empty():
@@ -34,144 +39,113 @@ class Agent:
             current state of the game
         Returns
         -------
-        """
-        if self.count_pieces(gs) <= 5:
-            depth = 8
-        elif self.count_pieces(gs) <= 8:
-            depth = 6
-        elif self.count_pieces(gs) <= 3:
-            depth = 10
-        else: 
-            depth = 4
-        valid_moves = self.initialize_move_list(gs, gs.whiteToMove)
-        
+        none
 
-        for i in range(len(valid_moves)):
-            valid_moves[i][1] = self.minimax(gs, depth, float("-inf"), float("inf")) #white is maximizing player
-        if gs.whiteToMove:
-            best_move = max(valid_moves, key=lambda x: x[1])
-        else:  
-            best_move = min(valid_moves, key=lambda x: x[1])
-        
-        
-        
-        self.update_move(best_move[0], best_move[1], depth)
-         
+        """
+        while True: #iterative deepening
+            self.maxDepth += 1
+            self.nextMove = None
+            bestScore = self.negamax(gs, gs.getValidMoves(), self.maxDepth, 1 if gs.whiteToMove else -1, -float("inf"), float("inf"))
+            self.update_move(self.nextMove, bestScore, self.maxDepth)
     
+    def negamax(self,gs, validMoves, depth, turn, alpha, beta):
+         
+        if depth == 0 or gs.checkMate or gs.staleMate or gs.draw or gs.staleMate:
+            return turn * self.heuristic(gs)
+        maxScore = -float("inf")
+        for move in validMoves:
 
+            gs.makeMove(move)
+            gs.getValidMoves()
+            nextMoves = gs.getValidMoves()
+            score = -self.negamax(gs, nextMoves, depth -1, -turn, -beta, -alpha)
+            if score > maxScore:
+                maxScore = score
+                if depth == self.maxDepth:
+                    self.nextMove = move
+            gs.undoMove()
+            
+            if maxScore > alpha: #prune
+                alpha = maxScore
+            if alpha >= beta:
+                break
+        return maxScore
 
-    def simpleHeuristic(self, gs):
-        """
-        Parameters
-        ----------
-        gs : Gamestate
-            current state of the game
-        Returns 
+    def heuristic(self, state):
+        h = self.computeHash(state, self.ZobristTable)
+        if h in self.lookupTable:
+            return self.lookupTable[h]
+        value =0
+        pieceScore = {"K": 0, "Q": 9, "R": 5, "B": 3, "N": 3, "p": 1}
+        nightScore = [1, 1, 1, 1, 1, 1,
+                      1, 2, 2, 2, 2, 1,
+                      1, 2, 3, 3, 2, 1,
+                      1, 2, 3, 3, 2, 1,
+                      1, 2, 2, 2, 2, 1,
+                      1, 1, 1, 1, 1, 1]
+        bishopScore = [   3, 3, 2, 1, 1, 4,
+                          3, 4, 3, 2, 4, 3,
+                          2, 3, 4, 4, 3, 2,
+                          1, 2, 4, 4, 2, 1,
+                          1, 4, 3, 2, 4, 1,
+                          4, 1, 2, 1, 1, 4]
+        queenScore = [1, 1, 8, 1, 1, 1,
+                        1, 2, 2, 2, 2, 1,
+                        1, 2, 3, 3, 2, 1,
+                        1, 2, 3, 3, 2, 1,
+                        1, 2, 2, 2, 2, 1,
+                        1, 1, 6, 1, 1, 1]
+        rookScore = [1, 1, 1, 1, 1, 1,
+                        1, 2, 2, 2, 2, 1,
+                        1, 2, 3, 3, 2, 1,
+                        1, 2, 3, 3, 2, 1,
+                        1, 2, 2, 2, 2, 1,
+                        1, 1, 1, 1, 1, 1]
+        whitePawnScore = [10, 10, 10, 10, 10, 10,
+                        9, 9, 9, 9, 9, 9,
+                        8, 8, 8, 8, 8, 8,
+                        1, 2, 4, 4, 1, 1,
+                        2, 4, 1, 1, 4, 2,
+                        0, 0, 0, 0, 0, 0]
+        blackPawnScore = [0, 0, 0, 0, 0, 0,
+                        2, 4, 1, 1, 1, 2,
+                        1, 2, 1, 1, 4, 1,
+                        1, 2, 4, 4, 2, 1,
+                        9, 9, 9, 9, 9, 9,
+                        10, 10, 10, 10, 10, 10]
+        dummyScore = [0, 0, 0, 0, 0, 0,
+                        0,0,0,0,0,0,
+                        0,0,0,0,0,0,
+                        0,0,0,0,0,0,
+                        0,0,0,0,0,0,
+                        0,0,0,0,0,0]
+        piecePosScores = {"K": dummyScore, "Q": dummyScore, "R": rookScore, "B": bishopScore, "N": nightScore, "wp": whitePawnScore, "bp": blackPawnScore}
+
+        if state.checkMate:
         
-        heuristic value of the current state 
-        """
-
-        pieces = ["N", "B", "R", "Q", "K", "p"]
-        values_of_pieces = [3, 3, 5, 10, 0, 1] #King is 0 because it is not a piece that can be captured
-        
-        pawn_endgame_value_white = [2, 2, 2, 2, 2, 2, #first row is irrelevant but i just did this for being save
-                      1.5, 1.5, 1.5, 1.5, 1.5, 1.5,
-                      1, 1, 1, 1, 1, 1,
-                      0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
-                      0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                      0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
-        
-        pawn_endgame_value_black = pawn_endgame_value_white[::-1]
-
-
-       
-
-        	
-      
-        
-
-              
-        if(gs.checkMate):
-            return  float("-inf") if gs.whiteToMove else float("inf")
-        elif(gs.staleMate):
-            return 0
-        else: 
-            score = 0
-            for i in range(36):
-                piece = gs.board[i]
-                if(piece != "--"):
-                    if(piece[0]=="w"):
-                        if(piece[1]=="p" and self.count_pieces(gs) <= 8):
-                            score += pawn_endgame_value_white[i]
-                        else:
-                            score +=  values_of_pieces[pieces.index(piece[1])]
-                       
-                    else:
-                        if(piece[1]=="p" and self.count_pieces(gs) <= 8):
-                            score -= pawn_endgame_value_black[i]
-                        else:
-                            score -=   values_of_pieces[pieces.index(piece[1])]
-            return score
-        
-
-    def minimax(self, gs, max_depth, alpha, beta):
-        """
-        Parameters
-        ----------
-        gs : Gamestate
-            current state of the game
-        depth : int
-            depth of the tree
-       
-        isMaximizingPlayer : bool
-            true if it is the maximizing player's turn
-        Returns
-        -------
-       int
-              heuristic value of the current state
-
-        """
-        if (max_depth == 0 or gs.checkMate or gs.staleMate):
-            return self.simpleHeuristic(gs)
-        valid_moves = gs.getValidMoves()
-        random.shuffle(valid_moves)
-        if (gs.whiteToMove):
-            maxEval = float("-inf")
-            for move in valid_moves:
-                gs.makeMove(move)
-                eval = self.minimax(gs, max_depth - 1, alpha, beta)
-                gs.undoMove()
-                maxEval = max(maxEval, eval)
-                alpha = max(alpha, eval)
-                if beta <= alpha:
-                    break
-            return maxEval
-
-        else:
-            minEval = float("inf")
-            for move in valid_moves:
-                gs.makeMove(move)
-                eval = self.minimax(gs, max_depth - 1, alpha, beta)
-                gs.undoMove()
-                minEval = min(minEval, eval)
-                beta = min(beta, eval)
-                if beta <= alpha:
-                    break
-            return minEval
-
-       
-
-
-
-
-    def initialize_move_list(self,gs, isMaximizingPlayer):
-            valid_moves = gs.getValidMoves()
-            move_eval = []
-            for valid_move in valid_moves:
-                move_eval.append([valid_move,float("-inf") if isMaximizingPlayer else float("inf")])
-            return move_eval
-        
-        
+            if state.whiteToMove:
+                value = - float("inf")
+            else:
+                value =  float("inf")
+            return value
+        elif state.staleMate or state.draw or state.staleMate:
+            return value 
+    
+        for i in range(len(state.board)):   
+            piece = state.board[i]
+            piecePosScore = 0
+            if piece != "--":
+                if piece[1] == "p":
+                    piecePosScore = piecePosScores[piece][i]
+                else:
+                    piecePosScore = piecePosScores[piece[1]][i]
+                if piece[0] == "w":
+                    value += pieceScore[piece[1]]+ piecePosScore * .1
+                elif piece[0] == "b":
+                    value -= pieceScore[piece[1]]+  piecePosScore * .1
+        self.lookupTable[h] = value
+        return value
+   
     def count_pieces(self, gs):
         """
         Parameters
@@ -188,22 +162,54 @@ class Agent:
             if gs.board[i] != "--":
                 count += 1
         return count
-
-# if __name__ == '__main__':
-#     gs = ChessEngine.GameState()
-#     gs.board = ['--', '--', '--', '--', '--', '--',
-#                 '--', 'bp', '--', '--', '--', '--',
-#                 '--', '--', 'wp', '--', '--', '--',
-#                 '--', '--', '--', '--', '--', '--',
-#                 '--', '--', '--', '--', '--', '--',
-#                 '--', '--', '--', '--', '--', '--']
-#     gs.whiteToMove = True
-
-#     agent = Agent()
-#     valid_moves = gs.getValidMoves()
+    # Generates a Random number from 0 to 2^64-1
+    def randomInt(self):
+        min = 0
+        max = pow(2, 36)
+        return random.randint(min, max)
     
-#    #print(move.pieceMoved() for move in agent.initialize_move_list(gs, gs.whiteToMove))
-#     agent.findBestMove(gs)
+    # This function associates each piece with
+    # a number
+    def indexOf(self, piece):
+        if (piece=='wp'):
+            return 0
+        elif (piece=='wN'):
+            return 1
+        elif (piece=='wB'):
+            return 2
+        elif (piece=='wQ'):
+            return 3
+        elif (piece=='wK'):
+            return 4
+        elif (piece=='bp'):
+            return 5
+        elif (piece=='bN'):
+            return 6
+        elif (piece=='bB'):
+            return 7
+        elif (piece=='bQ'):
+            return 8
+        elif (piece=='bK'):
+            return 9
+        else:
+            return -1
     
-#     print(agent.get_move())
-        
+    # Initializes the table
+    def initTable(self):
+        # 6x6x9 array
+        ZobristTable = [[self.randomInt() for k in range(10)] for j in range(36)]
+        return ZobristTable
+    
+    # Computes the hash value of a given board
+    def computeHash(self,gs, ZobristTable):
+        h = 0
+        for i in range(36):
+            if (gs.board[i] != '-'):
+                piece = self.indexOf(gs.board[i])
+                h ^= ZobristTable[i][piece]
+        return h
+#if __name__ == '__main__':
+#    piecePosScores = {"K": 0, "Q": 9, "R": 5, "B": 2, "N": 2, "p": 1}
+#    print(piecePosScores["--"][0])
+    
+    
